@@ -1,0 +1,195 @@
+import random as rn
+import matplotlib.pyplot as plt
+import numpy as np
+import pygame as pg
+import sys
+
+pg.init()
+
+
+class colonies_info():
+    quantity = 0
+    fl_stop = (165,42,42)
+    fl_grow = (34,139,34)
+    all = np.array([])
+    plot_square = np.array([])
+    plot_live = np.array([])
+    plot_time_life = np.array([])
+    v = 1
+    max_contact = 3
+    square = 0
+    live_quantity = 0
+    delta_coords = 1 + v
+
+    @staticmethod
+    def total_square():
+        colonies_info.square = 0
+        for i in colonies_info.all:
+            colonies_info.square += np.pi * i.r ** 2
+        colonies_info.plot_square = np.append(colonies_info.plot_square, colonies_info.square)
+
+    @staticmethod
+    def count_live():
+        colonies_info.live_quantity = 0
+        for i in colonies_info.all:
+            if i.fl == colonies_info.fl_grow:
+                colonies_info.live_quantity += 1
+        colonies_info.plot_live = np.append(colonies_info.plot_live, colonies_info.live_quantity)
+
+
+class circle_colony(colonies_info):
+
+    def __init__(self):
+
+        self.r = 1
+        done = False
+
+        while not done:
+            self.x = rn.randint(0 + colonies_info.delta_coords, Horizontal - colonies_info.delta_coords)
+            self.y = rn.randint(0 + colonies_info.delta_coords, Vertical - colonies_info.delta_coords)
+
+            for i in colonies_info.all:
+                if (i.x - self.x) ** 2 + (i.y - self.y) ** 2 < (i.r + self.r + colonies_info.delta_coords) ** 2:
+                    break
+            else:
+                done = True
+
+        colonies_info.quantity += 1
+        self.id = colonies_info.quantity - 1
+        colonies_info.all = np.append(colonies_info.all, self)
+        self.fl = colonies_info.fl_grow
+        self.time_life = 0
+        self.contact_boofer = 0
+
+    """def __init__(self, x, y):
+        self.x = x
+        self.y = y
+        self.r = 10
+        self.__class__.quantity += 1
+        self.id = self.__class__.quantity - 1
+        self.__class__.all.append(self)"""
+
+    # @staticmethod
+    # def get_quantity():
+    #     return colonies_info.quantity
+
+    @staticmethod
+    def destructor():
+        for i in colonies_info.all:
+            if i.contact_boofer >= colonies_info.max_contact:
+                colonies_info.all = np.delete(colonies_info.all, np.where(colonies_info.all == i))
+            i.contact_boofer = 0
+
+    @staticmethod
+    def grow():
+        for i in circle_colony.all:
+            if not (i.contact_boofer > 0) and not i.is_touching_wall():
+                i.fl = colonies_info.fl_grow
+                i.r += circle_colony.v
+                i.time_life += 1
+            else:
+                i.fl = colonies_info.fl_stop
+
+    @staticmethod
+    def show():
+        for i in circle_colony.all:
+            pg.draw.circle(sc, i.fl, [i.x, i.y], i.r)
+
+
+    @staticmethod
+    def is_touching():
+        for i in range(0, len(colonies_info.all)):
+            for j in range(i + 1, len(colonies_info.all)):
+                if colonies_info.all[j].x >= colonies_info.all[i].x - colonies_info.all[i].r - colonies_info.all[j].r and colonies_info.all[j].x <= colonies_info.all[i].x + colonies_info.all[i].r + colonies_info.all[j].r and colonies_info.all[j].y >= colonies_info.all[i].y - colonies_info.all[i].r - colonies_info.all[j].r and colonies_info.all[j].y <= colonies_info.all[i].y + colonies_info.all[i].r + colonies_info.all[j].r and (colonies_info.all[j].x - colonies_info.all[i].x) ** 2 + (colonies_info.all[j].y - colonies_info.all[i].y) ** 2 <= (colonies_info.all[j].r + colonies_info.all[i].r) ** 2:
+                    colonies_info.all[i].contact_boofer += 1
+                    colonies_info.all[j].contact_boofer += 1
+
+
+    def is_touching_wall(self):
+        if (self.x + self.r) >= Horizontal or (self.x - self.r) <= 0 or (self.y + self.r) >= Vertical or (
+                self.y - self.r) <= 0:
+            self.fl = colonies_info.fl_stop
+
+            return True
+        else:
+            return False
+
+
+def real_time_func(a, b):
+    plt.ion()
+    plt.clf()
+    plt.plot(a, b)
+    plt.pause(0.0001)
+
+
+def to_list_life():
+    for i in colonies_info.all:
+        colonies_info.plot_time_life = np.append(colonies_info.plot_time_life, i.time_life)
+
+
+def is_live():
+    for i in colonies_info.all:
+        if i.fl == colonies_info.fl_grow:
+            return True
+
+
+""""""""""""""""""""""""
+
+Horizontal = 2560
+Vertical = 1440
+FPS = 300
+pg.display.set_caption("Colony")
+sc = pg.display.set_mode([Horizontal, Vertical])
+plot_time = np.array([])
+timer = 0
+time_spawn = 15000
+time_experiment = 16000
+clock = pg.time.Clock()
+
+""""""""""""""""""""""""
+
+while timer <= time_experiment:
+    clock.tick(FPS)
+
+    sc.fill((255, 255, 255))
+
+    for i in pg.event.get():
+        if i.type == pg.QUIT:
+            sys.exit()
+
+    if timer < time_spawn:
+        circle_colony()
+
+    timer += 1
+    plot_time = np.append(plot_time, timer)
+
+    colonies_info.total_square()
+    colonies_info.count_live()
+    circle_colony.is_touching()
+    circle_colony.grow()
+    circle_colony.show()
+    circle_colony.destructor()
+
+    pg.display.flip()
+
+    # График площади в реальном времени
+    real_time_func(plot_time, colonies_info.plot_square)
+
+    # if not is_live():
+    #     break
+
+pg.quit()
+
+# # Площади от времени
+# plt.plot(plot_time, colonies_info.plot_square, label=u'Square', color='b')
+# plt.show()
+#
+# # Живые от времени
+# plt.plot(plot_time, colonies_info.plot_live, label=u'Live', color='g')
+# plt.show()
+#
+# # Время жизни от момента рождения без деструктора
+# to_list_life()
+# plt.scatter(plot_time[0:len(colonies_info.plot_time_life)], colonies_info.plot_time_life, label=u'Time of life', color='y')
+#
+# plt.show()
